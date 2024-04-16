@@ -11,16 +11,7 @@ while true; do
     pods=$(kubectl get pods -n $NAMESPACE -l app=$DEPLOYMENT_NAME -o jsonpath="{.items[*].metadata.name}")
 
     for pod in $pods; do
-        # Fetch the pod's overall status
-        pod_status=$(kubectl get pod $pod -n $NAMESPACE -o jsonpath="{.status.phase}")
-
-        # Check the status of the pod before proceeding
-        if [[ "$pod_status" == "Pending" ]]; then
-            echo "Pod $pod is pending, likely not scheduled yet."
-            continue  # Skip further checks and continue with the next pod
-        fi
-
-        # Fetch the restart count for each pod, making sure container statuses are available
+        # Fetch the restart count for each pod
         restart_count=$(kubectl get pod $pod -n $NAMESPACE -o jsonpath="{.status.containerStatuses[0].restartCount}")
 
         # Validate the fetched restart count
@@ -35,8 +26,9 @@ while true; do
         # Check if restarts exceed the maximum allowed number
         if [ "$restart_count" -gt $MAX_RESTARTS ]; then
             echo "Pod $pod exceeded max restarts. Taking appropriate action..."
-            kubectl scale deployment/$DEPLOYMENT_NAME --replicas=0 -n $NAMESPACE
-            break 2  # This will exit both the for-loop and the while-loop
+            kubectl scale deployment $DEPLOYMENT_NAME --replicas=0 -n $NAMESPACE
+            # This break will exit the for-loop and the while-loop should also be terminated
+            break 2  # Correct usage of break 2 to exit both loops
         fi
     done
 
